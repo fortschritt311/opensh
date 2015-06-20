@@ -3,7 +3,7 @@ opensh
 
 open smart home
 
--Integriert folgende Module zu eine kleinen Gebäudeautomatisierung :<br>
+-Integriert folgende Module zu eine kleinen Gebäudeautomatisierung :<br><br>
   -Homematic Bidcos, HS485, System<br>
   -OWFS One Wire File System<br>
   -lm-sensors<br>
@@ -12,7 +12,7 @@ open smart home
   
 -Datenspeicherung in MySQL Datenank
 
--Heizungssteuerung uhc2 - universal heating control mit folgenden Modulen :<br>
+-Heizungssteuerung uhc2 - universal heating control mit folgenden Modulen :<br><br>
   -uhc2_vs    - Vorlaufsolltemperaturermittlung<br>
   -uhc2_bw    - Brauchwasserpumpen Regelung<br>
   -uhc2_zp    - Zirkulationspumpen Regelung<br>
