@@ -13,7 +13,7 @@ open smart home
 -Datenspeicherung in MySQL Datenank
 
 -Heizungssteuerung uhc2 - universal heating control mit folgenden Modulen :
-  -uhc2_vs    - Vorlaufsolltemperaturermittlung
+  -uhc2_vs    - Vorlaufsolltemperaturermittlung<br>
   -uhc2_bw    - Brauchwasserpumpen Regelung
   -uhc2_zp    - Zirkulationspumpen Regelung
   -uhc2_hk1   - Vorlaufsolltemperaturgeführte Heizkreisreglung
