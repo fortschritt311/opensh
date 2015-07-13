@@ -8,7 +8,7 @@ open smart home
   -OWFS One Wire File System<br>
   -lm-sensors<br>
   -apcupsd Unterbrechungsfreie Soannungsversorgung<br>
-  -vcontrol Viessmann Heizungsansteuerung<br
+  -vcontrol Viessmann Heizungsansteuerung<br>
   
 -Datenspeicherung in MySQL Datenank
 
