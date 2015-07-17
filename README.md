@@ -3,7 +3,7 @@ opensh
 
 <h3>open smart home</h3>
 
-<h5>Integriert folgende Module zu eine kleinen Gebäudeautomatisierung :</h5><br><br>
+<h5>Integriert folgende Module zu eine kleinen Gebäudeautomatisierung :</h5><br>
   -Homematic Bidcos, HS485, System<br>
   -OWFS One Wire File System<br>
   -lm-sensors<br>
