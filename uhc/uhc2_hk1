@@ -1,0 +1,64 @@
+#!/usr/bin/perl -w
+
+use strict;
+use warnings;
+use rlib ('../lib');
+use config;
+use modules;
+
+# Konfigurationsdatei einlesen
+my $cfg = uhccfg();
+
+# Werte einlesen
+my $sleep = $cfg->val( 'hk1_vl', 'time' );
+my $aktor_pumpe_hk1 = $cfg->val( 'hk1_vl' , 'pumpe_hk1' );
+my $aktor_pumpe_hk1_extoff = $cfg->val( 'hk1_vl' , 'pumpe_hk1_extoff' );
+my $aktor_pumpe_hk1_ssm = $cfg->val( 'hk1_vl' , 'pumpe_hk1_ssm' );
+my $aktor_mischer_hk1 = $cfg->val( 'hk1_vl','mischer_hk1' );
+my $sensor_hk1 = $cfg->val( 'hk1_vl', 'sensor_hk1');
+
+while(1) {
+
+# Betriebzustand der Heizkreispumpe auslesen
+my $pumpe_hk1 = sql_getvalue('wired',$aktor_pumpe_hk1,'STATE');
+my $pumpe_hk1_extoff = sql_getvalue('wired',$aktor_pumpe_hk1_extoff,'STATE');
+my $pumpe_hk1_ssm = sql_getvalue('wired',$aktor_pumpe_hk1_ssm,'STATE');
+
+	# Mischer regelt nur bei Hauptrelais Hk1 = true, Hk1 ExternOff = true und Hk1 Sammelstörmelung = false
+	if (($pumpe_hk1 == 1) && ($pumpe_hk1_extoff == 1) && ($pumpe_hk1_ssm == 0)) {
+
+	# Werte einlesen und formatieren
+	my $vorlauf_soll = sql_getvalue('uhc','Vorlaufsoll','temperature');
+	my $vorlauf_ist = sql_getvalue('owfs',$sensor_hk1,'temperature');
+	my $mischer_hk1 = sql_getvalue('wired',$aktor_mischer_hk1,'LEVEL');
+
+	# Berechnung Regelbereich fein
+	my $vorlauf_oben_o = ($vorlauf_soll + 2);
+	my $vorlauf_oben_u = ($vorlauf_soll + 0.5);
+	my $vorlauf_unten_u = ($vorlauf_soll - 2);
+	my $vorlauf_unten_o = ($vorlauf_soll - 0.5);
+
+	# Regelung Mischer Heizkreis 1
+		# Mischer 3% zu, wenn Vorlauftemperatur außerhalb Feinregelbereich
+		if (($vorlauf_ist > $vorlauf_oben_o) && ($mischer_hk1 > 0)) {
+        		my $mischer_k2 = sprintf("%.3f", ($mischer_hk1 - 0.03));
+        		xmlrpc_setvalue('wired',$aktor_mischer_hk1,'LEVEL',$mischer_k2);
+      		}
+		# Mischer 0.5 % auf, wenn Vorlauftemperatur im Feinregelbereich -2 bis -0.5
+		if (($vorlauf_ist >= $vorlauf_unten_u) && ($vorlauf_ist < $vorlauf_unten_o)) {
+        		my $mischer_w1 = sprintf("%.3f", ($mischer_hk1 + 0.005));
+			xmlrpc_setvalue('wired',$aktor_mischer_hk1,'LEVEL',$mischer_w1);
+      		}
+		# Mischer 3% auf, wenn Vorlauftemperatur außerhalb Feinregelbereich
+		if (($vorlauf_ist < $vorlauf_unten_u) && ($mischer_hk1 < 1)) {
+        		my $mischer_w2 = sprintf("%.3f", ($mischer_hk1 + 0.03));
+        		xmlrpc_setvalue('wired',$aktor_mischer_hk1,'LEVEL',$mischer_w2);
+      		}	
+		# Mischer 0.5 % zu, wenn Vorlauftemperatur im Feinregelbereich 2 bis 0.5
+		if (($vorlauf_ist > $vorlauf_oben_u) && ($vorlauf_ist <= $vorlauf_oben_o)) {
+        		my $mischer_k1 = sprintf("%.3f", ($mischer_hk1 - 0.005));
+			xmlrpc_setvalue('wired',$aktor_mischer_hk1,'LEVEL',$mischer_k1);
+      		}
+	}
+sleep($sleep);
+}

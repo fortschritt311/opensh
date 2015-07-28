@@ -1,0 +1,45 @@
+#!/usr/bin/perl -w
+
+use strict;
+use warnings;
+use rlib ('../lib');
+use config;
+use modules;
+
+# Konfigurationsdatei einlesen
+my $cfg = uhccfg();
+
+# Werte einlesen
+my $sleep = $cfg->val( 'lp', 'time' );
+my $temp_oel_diff = $cfg->val( 'lp', 'oel_diff' );
+my $temp_puffer_diff = $cfg->val( 'lp', 'puffer_diff' );
+my $temp_lp_Tmax = $cfg->val( 'lp', 'lp_Tmax' );
+my $sensor_oel = $cfg->val( 'oel', 'sensor_oel');
+my $sensor_puffer_1_1 = $cfg->val( 'lp', 'sensor_puffer');
+my $aktor_pumpe = $cfg->val( 'lp' , 'pumpe_lp' );
+
+while(1) {
+
+# Werte einlesen
+my $pumpe_lp = sql_getvalue('wired',$aktor_pumpe,'STATE');
+my $temp_oel = sql_getvalue('owfs',$sensor_oel,'temperature');
+my $temp_puffer = sql_getvalue('owfs',$sensor_puffer_1_1,'temperature');
+
+# Werte berechnen
+my $temp_oel_ber = $temp_oel + $temp_oel_diff;
+my $temp_puffer_ber = $temp_oel + $temp_puffer_diff;
+
+# Regelung Oelkessel-Ladepumpe
+	if ($temp_oel < $temp_lp_Tmax) {
+        	if (($temp_puffer > $temp_oel_ber) && ($pumpe_lp == 0)) {
+        	xmlrpc_setvalue('wired',$aktor_pumpe,'STATE','true');
+		}
+        	elsif (($temp_puffer < $temp_puffer_ber) && ($pumpe_lp == 1)){
+        	xmlrpc_setvalue('wired',$aktor_pumpe,'STATE','false');
+        	}
+	}
+	elsif ($pumpe_lp == 1){
+		xmlrpc_setvalue('wired',$aktor_pumpe,'STATE','false');
+	}	
+sleep($sleep);
+}

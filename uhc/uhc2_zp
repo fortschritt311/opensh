@@ -1,0 +1,31 @@
+#!/usr/bin/perl -w
+
+use strict;
+use warnings;
+use rlib ('../lib');
+use config;
+use modules;
+
+# Konfigurationsdatei einlesen
+my $cfg = uhccfg();
+
+# Werte einlesen
+my $sleep = $cfg->val( 'zp', 'time' );
+my $ontime = $cfg->val( 'zp' , 'zp_ontime' );
+my $zp_rl_soll = $cfg->val( 'zp', 'zp_rl_soll' );
+my $sensor_zp_rl = $cfg->val( 'zp', 'sensor_zp_rl' );
+my $aktor_pumpe = $cfg->val( 'zp' , 'pumpe_zp' );
+
+while(1) {
+
+# Rücklauftemperatur Zirkulationsleitung auslesen
+my $zp_rl_ist = sql_getvalue('owfs',$sensor_zp_rl,'temperature');
+
+	# Regelung Zirkulationspumpe
+	if (($zp_rl_soll > $zp_rl_ist) && ($time{'hhmmss'} > '073000') && ($time{'hhmmss'} < '200000')) {
+      		xmlrpc_setvalue('wired',$aktor_pumpe,'STATE','true');
+		sleep($ontime);
+      		xmlrpc_setvalue('wired',$aktor_pumpe,'STATE','false');
+	}	
+sleep($sleep);
+}

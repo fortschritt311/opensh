@@ -1,0 +1,43 @@
+#!/usr/bin/perl -w
+
+use strict;
+use warnings;
+use rlib ('../lib');
+use config;
+use modules;
+
+# Konfigurationsdatei einlesen
+my $cfg = uhccfg();
+
+# Werte einlesen und formatieren
+my $temp_bw_min = $cfg->val( 'bw', 'bw_min' );
+my $temp_bw_max = $cfg->val( 'bw', 'bw_max' );
+my $sensor_bw = $cfg->val( 'bw', 'sensor_bw' );
+my $aktor_pumpe = $cfg->val( 'bw' , 'pumpe_bw' );
+my $sleep = $cfg->val( 'bw', 'time' );
+
+while(1) {
+
+# Betriebszustand der Brauchwasserpumpe auslesen
+my $pumpe_bw = sql_getvalue('wired',$aktor_pumpe,'STATE');
+
+# Brauchwassertemperatur auslesen
+my $temp_bw = sql_getvalue('owfs',$sensor_bw,'temperature');
+
+# Regelung Brauchwasserpumpe
+	if (($time{'hhmmss'} > '070000') && ($time{'hhmmss'} < '200000')) {
+        	if (($temp_bw < $temp_bw_min) && ($pumpe_bw == 0)) {
+        		xmlrpc_setvalue('wired',$aktor_pumpe,'STATE','true');
+			xmlrpc_setvalue('vcontrol','','setTempKOffset','20');
+        	}
+        	if (($temp_bw > $temp_bw_max) && ($pumpe_bw == 1)) {
+        		xmlrpc_setvalue('wired',$aktor_pumpe,'STATE','false');
+			xmlrpc_setvalue('vcontrol','','setTempKOffset','10');
+        	}
+	}
+	elsif (($temp_bw > $temp_bw_max) && ($pumpe_bw == 1)) {
+            		xmlrpc_setvalue('wired',$aktor_pumpe,'STATE','false');
+			xmlrpc_setvalue('vcontrol','','setTempKOffset','10');
+	}
+sleep($sleep);
+}

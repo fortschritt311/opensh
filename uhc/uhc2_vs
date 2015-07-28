@@ -1,0 +1,49 @@
+#!/usr/bin/perl -w
+
+use strict;
+use warnings;
+use rlib ('../lib');
+use modules;
+use config;
+use Date::Calc qw(:all);
+
+# Konfigurationsdatei einlesen
+my $cfg = uhccfg();
+
+# Werte einlesen
+my $sensor_out = $cfg->val( 'vs', 'sensor_out' );
+my $temp_vorlauf_ref = $cfg->val( 'vs', 'temp_vorlauf_ref' );
+my $temp_out_ref = $cfg->val( 'vs', 'temp_out_ref' );
+
+# Schleife
+while(1) {
+
+sub sleep_time {
+
+        my ($sec,$min,$hour)=localtime;
+        my $time = sprintf ( "%02d:%02d:%02d", $hour,$min,$sec);
+        my $exectime = "22:00:00";
+
+        if ($time lt $exectime) {
+                my ($Dd,$Dh,$Dm,$Ds) = Delta_DHMS(1,1,1, $hour,$min,$sec, 1,1,1, 22,00,00);
+                my $diff = (($Dd*86400)+($Dh*3600)+($Dm*60)+$Ds);
+                return $diff;
+        } else {
+                return 86400;
+        }
+}
+
+my $sleep = sleep_time();
+
+# Außentemperatur auslesen
+my $temp_out = sql_getvalue('owfs',$sensor_out,'temperature');
+
+# Berechnung der aktuellen Vorlaufsolltemperatur und speichern in MySQL DB
+	if ($temp_out < $temp_out_ref) {
+		my $vorlauf_soll = ((($temp_out_ref - $temp_out) * $cfg->val( 'vs', 'korrekturfaktor' )) + $temp_vorlauf_ref);
+      		sql_setvalue('uhc', 'Vorlaufsoll', 'temperature', $vorlauf_soll); 
+   	} else {
+		sql_setvalue('uhc', 'Vorlaufsoll', 'temperature', $temp_vorlauf_ref);
+   }
+sleep($sleep);
+}

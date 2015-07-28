@@ -1,0 +1,90 @@
+#!/usr/bin/perl -w
+
+use strict;
+use warnings;
+use rlib ('../lib');
+use config;
+use modules;
+
+# Konfigurationsdatei einlesen
+my $cfg = uhccfg();
+
+# Konfiguration einlesen
+my $get_ba_oelkessel = $cfg->val( 'oel' , 'dp_get_betriebsart' );
+my $set_ba_oelkessel = $cfg->val( 'oel' , 'dp_set_betriebsart' );
+my $brenner_oelkessel = $cfg->val( 'oel' , 'dp_status_brenner' );
+my $ini_zuluft = $cfg->val( 'oel' , 'ini_zuluft' );
+my $aktor_pumpe_bw = $cfg->val( 'bw' , 'pumpe_bw' );
+my $aktor_extoff_brenner = $cfg->val( 'oel' , 'brenner' );
+my $aktor_zuluft = $cfg->val( 'oel' , 'aktor_zuluft' );
+my $sleep = $cfg->val( 'oel', 'time' );
+
+sub brenner_ein {
+	RESTART:
+	# Initiator Zuluft auslesen
+	my $status_zuluft = sql_getvalue('wired',$ini_zuluft,'STATE');
+	if ($status_zuluft == 1){
+         	xmlrpc_setvalue('wired',$aktor_extoff_brenner,'STATE','true');
+        } else {
+         	xmlrpc_setvalue('wired',$aktor_zuluft,'STATE','true');
+                sleep(30);
+                goto RESTART;
+        }
+}	
+
+sub brenner_aus {
+	xmlrpc_setvalue('wired',$aktor_extoff_brenner,'STATE','false');
+        xmlrpc_setvalue('wired',$aktor_zuluft,'STATE','false');
+}
+
+while(1) {
+
+# Betriebszustand Oelbrenner auslesen
+my $betriebsart = sql_getvalue('vcontrol','Vitronic 150KB1',$get_ba_oelkessel);
+# Betriebszustand Brenner auslesen
+my $status_brenner = sql_getvalue('vcontrol','Vitronic 150KB1',$brenner_oelkessel);
+# Ext-Off Oelbrenner auslesen
+my $extoff_brenner = sql_getvalue('wired',$aktor_extoff_brenner,'STATE');
+# Sommer oder Winterbetrieb
+my $modus = sql_getvalue('uhc','Betriebsart','modus');
+# Betriebszustand Pumpe Brauchwasser
+my $pumpe_bw = sql_getvalue('wired',$aktor_pumpe_bw,'STATE');
+
+# Regelung Oelbrenner
+	# Winterbetrieb
+	if ($modus eq 'winter') {
+		if ($betriebsart eq 'ABSCHALT') {
+			xmlrpc_setvalue('vcontrol','',$set_ba_oelkessel,'H+WW');
+		}
+		if (($status_brenner == 1) && ($extoff_brenner == 0)) {
+                        brenner_ein();
+                }
+                if (($status_brenner == 0) && ($extoff_brenner == 1)) {
+                        brenner_aus();
+                }
+	}
+	#Sommerbetrieb
+	if ($modus eq 'sommer') {
+		if (($time{'hhmmss'} > '065500') && ($time{'hhmmss'} < '200500')) {
+			if ($betriebsart eq 'ABSCHALT') {
+				xmlrpc_setvalue('vcontrol','',$set_ba_oelkessel,'H+WW');
+			} else {
+				if (($status_brenner == 1) && ($extoff_brenner == 0)) {
+					brenner_ein();
+				}
+				if (($status_brenner == 0) && ($extoff_brenner == 1)) {
+					brenner_aus();
+				}					
+			}
+
+		} else {
+			if (($pumpe_bw == 0) && ($betriebsart eq 'H+WW')) { 
+				xmlrpc_setvalue('vcontrol','',$set_ba_oelkessel,'ABSCHALT');
+			}
+			if (($pumpe_bw == 1) && ($status_brenner == 1) && ($extoff_brenner == 0)) {
+				brenner_ein();
+			}
+		}	
+	}
+sleep($sleep);
+}
